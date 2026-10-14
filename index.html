@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WhatsApp Image Fixer · Kwanda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#ffffff; --ink:#16181b; --muted:#5d6168; --line:#dcd9d2;
+  --gold:#b98522; --gold-ink:#7a5510; --ok:#1f7a45; --bad:#b3261e; --drop:#fbf7ee;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121315; --surface:#1b1d20; --ink:#ecebe7; --muted:#a3a6ab; --line:#33363b;
+    --gold:#d8a640; --gold-ink:#f0c66e; --ok:#5cc489; --bad:#f2847b; --drop:#1f1c16;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121315; --surface:#1b1d20; --ink:#ecebe7; --muted:#a3a6ab; --line:#33363b;
+  --gold:#d8a640; --gold-ink:#f0c66e; --ok:#5cc489; --bad:#f2847b; --drop:#1f1c16;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.5}
+main{max-width:860px;margin:0 auto;padding:40px 20px 64px}
+h1{font-size:clamp(1.8rem,4vw,2.5rem);font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:0 0 10px}
+.lede{color:var(--muted);max-width:60ch;margin:0 0 28px;font-size:1.05rem}
+.spec{display:inline-flex;gap:8px;flex-wrap:wrap;margin:0 0 28px;padding:0;list-style:none}
+.spec li{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:.9rem;color:var(--muted);background:var(--surface)}
+.spec b{color:var(--ink)}
+#drop{display:block;border:2px dashed var(--gold);background:var(--drop);border-radius:14px;padding:44px 20px;text-align:center;cursor:pointer;transition:background .15s}
+#drop:hover,#drop.over{background:color-mix(in srgb,var(--gold) 14%,var(--drop))}
+#drop:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+#drop strong{display:block;font-size:1.15rem;margin-bottom:4px}
+#drop span{color:var(--muted);font-size:.95rem}
+#file{position:absolute;width:1px;height:1px;opacity:0}
+#work{display:none;margin-top:28px;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.stage{position:relative;background:#000;aspect-ratio:1200/630;cursor:grab;touch-action:none}
+.stage.drag{cursor:grabbing}
+.stage canvas{display:block;width:100%;height:100%}
+.hint{position:absolute;left:12px;bottom:10px;background:rgba(0,0,0,.6);color:#fff;font-size:.8rem;padding:3px 9px;border-radius:6px;pointer-events:none}
+.panel{padding:20px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.name{font-weight:700;word-break:break-all}
+.compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.box{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.box h3{margin:0 0 4px;font-size:.85rem;font-weight:700;color:var(--muted)}
+.box p{margin:0;font-size:1.05rem;font-weight:700}
+.box small{display:block;color:var(--muted);font-weight:500;font-size:.85rem}
+.good{color:var(--ok)} .warn{color:var(--bad)}
+label.zoom{display:flex;align-items:center;gap:10px;font-size:.95rem;color:var(--muted);flex:1;min-width:220px}
+input[type=range]{flex:1;accent-color:var(--gold)}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;border-radius:10px;padding:11px 18px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+button.primary{background:var(--gold);border-color:var(--gold);color:#1a1205}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#msg{min-height:1.5em;margin:12px 0 0;font-size:.95rem}
+#fallback{display:none;margin-top:14px;font-size:.92rem;color:var(--muted)}
+#fallback img{display:block;max-width:100%;margin-top:8px;border-radius:8px;border:1px solid var(--line)}
+section.after{margin-top:36px}
+section.after h2{font-size:1.15rem;margin:0 0 10px}
+section.after ol{margin:0;padding-left:1.3em;max-width:62ch}
+section.after li{margin-bottom:8px}
+code{background:color-mix(in srgb,var(--gold) 15%,transparent);padding:1px 6px;border-radius:5px;font-size:.9em;word-break:break-all}
+@media (max-width:520px){.compare{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>WhatsApp Image Fixer</h1>
+  <p class="lede">Make any photo ready to be a Kwanda featured image, so the picture shows when the link is shared on WhatsApp.</p>
+  <ul class="spec">
+    <li><b>1200 × 630</b> px</li>
+    <li><b>JPG</b></li>
+    <li>Under <b>300 KB</b></li>
+  </ul>
+
+  <label id="drop" tabindex="0" for="file">
+    <strong>Drop a photo here, or tap to choose one</strong>
+    <span>JPG, PNG or WebP. The photo stays on your device.</span>
+  </label>
+  <input id="file" type="file" accept="image/*">
+
+  <div id="work">
+    <div class="stage" id="stage">
+      <canvas id="view" width="1200" height="630"></canvas>
+      <span class="hint">Drag to choose what stays in the frame</span>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <div class="name" id="fname"></div>
+        <label class="zoom">Zoom <input id="zoom" type="range" min="1" max="3" step="0.01" value="1"></label>
+      </div>
+      <div class="compare">
+        <div class="box"><h3>Before</h3><p id="before">—</p><small id="beforeDim"></small></div>
+        <div class="box"><h3>After</h3><p id="after">—</p><small>1200 × 630 JPG</small></div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="save" disabled>Download fixed image</button>
+        <button id="another">Fix another photo</button>
+      </div>
+      <p id="msg" role="status" aria-live="polite"></p>
+      <div id="fallback">Downloading isn't available in this view. Right-click the image (or long-press on a phone) and choose "Save image".<img id="fbimg" alt="Fixed image ready to save"></div>
+    </div>
+  </div>
+
+  <section class="after">
+    <h2>After downloading</h2>
+    <ol>
+      <li>In the admin, open the article and replace the featured image with the downloaded file, then save.</li>
+      <li>If the link was already shared before, add <code>?v=5</code> (or any new number) to the end when you post it, so WhatsApp loads the new image.</li>
+      <li>Paste the link and wait until the image appears in the preview before you press send.</li>
+    </ol>
+  </section>
+</main>
+
+<script>
+(function(){
+  const W=1200,H=630,TARGET=290*1024;
+  const fileIn=document.getElementById('file'),drop=document.getElementById('drop'),work=document.getElementById('work');
+  const view=document.getElementById('view'),ctx=view.getContext('2d'),stage=document.getElementById('stage');
+  const zoomIn=document.getElementById('zoom'),saveBtn=document.getElementById('save'),msg=document.getElementById('msg');
+  const fb=document.getElementById('fallback'),fbimg=document.getElementById('fbimg');
+  let img=null,srcName='image',srcSize=0,cx=.5,cy=.5,zoom=1,outBlob=null,timer=null;
+
+
+  function kb(n){return n<1024*1024?Math.round(n/1024)+' KB':(n/1024/1024).toFixed(1)+' MB'}
+  function slug(n){return (n.replace(/\.[^.]+$/,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'image')}
+
+  function rect(){
+    const base=Math.max(W/img.width,H/img.height)*zoom;
+    const sw=W/base,sh=H/base;
+    let sx=cx*img.width-sw/2,sy=cy*img.height-sh/2;
+    sx=Math.max(0,Math.min(img.width-sw,sx));sy=Math.max(0,Math.min(img.height-sh,sy));
+    cx=(sx+sw/2)/img.width;cy=(sy+sh/2)/img.height;
+    return {sx,sy,sw,sh};
+  }
+  function draw(c){
+    const r=rect();
+    c.fillStyle='#ffffff';c.fillRect(0,0,W,H);
+    c.imageSmoothingQuality='high';
+    c.drawImage(img,r.sx,r.sy,r.sw,r.sh,0,0,W,H);
+  }
+  function render(){draw(ctx);schedule()}
+  function schedule(){saveBtn.disabled=true;document.getElementById('after').textContent='Working…';clearTimeout(timer);timer=setTimeout(compress,250)}
+
+  function toBlob(q){return new Promise(r=>view.toBlob(r,'image/jpeg',q))}
+  async function compress(){
+    let lo=.4,hi=.92,best=null;
+    let b=await toBlob(hi);
+    if(b&&b.size<=TARGET){best=b}else{
+      for(let i=0;i<7;i++){const m=(lo+hi)/2;b=await toBlob(m);if(b.size<=TARGET){best=b;lo=m}else hi=m}
+      if(!best){best=await toBlob(.4)}
+    }
+    outBlob=best;
+    const a=document.getElementById('after');
+    a.textContent=kb(best.size)+(best.size<=300*1024?' ✓':'');
+    a.className=best.size<=300*1024?'good':'warn';
+    saveBtn.disabled=false;
+    if(fb.style.display==='block'){fbimg.src=URL.createObjectURL(best)}
+  }
+
+  function load(file){
+    if(!file||!file.type.startsWith('image/')){msg.textContent='That file isn\'t an image. Choose a JPG, PNG or WebP photo.';return}
+    const url=URL.createObjectURL(file);const i=new Image();
+    i.onload=()=>{
+      img=i;srcName=file.name;srcSize=file.size;cx=.5;cy=.5;zoom=1;zoomIn.value=1;
+      document.getElementById('fname').textContent=file.name;
+      const bad=file.size>300*1024||i.width!==W||i.height!==H;
+      const be=document.getElementById('before');be.textContent=kb(file.size)+(bad?' ✗':' ✓');be.className=bad?'warn':'good';
+      document.getElementById('beforeDim').textContent=i.width+' × '+i.height+' px';
+      msg.textContent='';fb.style.display='none';
+      work.style.display='block';render();
+      work.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+    };
+    i.onerror=()=>{msg.textContent='This image couldn\'t be opened. Try saving it as JPG or PNG first.'};
+    i.src=url;
+  }
+
+  fileIn.addEventListener('change',e=>{load(e.target.files[0]);fileIn.value=''});
+  drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileIn.click()}});
+  ['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+  ['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
+  drop.addEventListener('drop',e=>{load(e.dataTransfer.files[0])});
+
+  let dragging=false,lx=0,ly=0;
+  stage.addEventListener('pointerdown',e=>{if(!img)return;dragging=true;lx=e.clientX;ly=e.clientY;stage.classList.add('drag');stage.setPointerCapture(e.pointerId)});
+  stage.addEventListener('pointermove',e=>{
+    if(!dragging)return;
+    const r=rect(),scale=r.sw/stage.clientWidth;
+    cx-=(e.clientX-lx)*scale/img.width;cy-=(e.clientY-ly)*scale/img.height;
+    lx=e.clientX;ly=e.clientY;draw(ctx);
+  });
+  function end(){if(dragging){dragging=false;stage.classList.remove('drag');schedule()}}
+  stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
+  zoomIn.addEventListener('input',()=>{zoom=parseFloat(zoomIn.value);draw(ctx)});
+  zoomIn.addEventListener('change',schedule);
+
+  saveBtn.addEventListener('click',()=>{
+    if(!outBlob)return;
+    const name=slug(srcName)+'-1200x630.jpg';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(outBlob);a.download=name;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    msg.textContent='Saved as '+name+'. Upload it as the featured image.';
+  });
+  function showFallback(){fbimg.src=URL.createObjectURL(outBlob);fb.style.display='block';msg.textContent=''}
+
+  document.getElementById('another').addEventListener('click',()=>fileIn.click());
+})();
+</script>
+</body>
+</html>
